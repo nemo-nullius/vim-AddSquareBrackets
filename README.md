@@ -1,6 +1,6 @@
-#Readme
+# Readme
 
-##Description
+## Description
 
 This little vim script is aimed to help
 
@@ -12,7 +12,7 @@ This little vim script is aimed to help
 
 in vim.
 
-##Usage
+## Usage
 
 Add this line in .vimrc
 
