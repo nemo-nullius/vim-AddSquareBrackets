@@ -296,11 +296,33 @@ function GotoLastFbracket() " This function is used to goto last （ if exists
 endfunction
     
 
+function GotoNextJian() " This function is used to goto next Zhengjian, in Chinese 箋云：
+    let l:o_char_line = line('.') " Record the position of the original place
+    let l:o_char_col = col('.')
+    " Goto get the position of the char in the end.
+    normal! $
+    let l:endpos_col = col('.') 
+    call cursor(l:o_char_line, o_char_col) " After get the position of the char in the end, go back to the original place.
+
+    let l:char_col = col('.') " Record the position of the present char.
+    while l:char_col < l:endpos_col " DON'T use <=, for if the cursor is at the end, although normal l is used, the l:char_col will not be added!
+        if GetCharUnderCursor() ==# '箋' && GetCharInSameLine(1) ==# '云' && GetCharInSameLine(2) ==# '：'
+            normal! lll
+            return 1 " End this function
+        endif
+        normal! l
+        let l:char_col = col('.')
+        "echo l:char_col
+    endwhile
+    call cursor(l:o_char_line, o_char_col) " If no （ is found, go back to the original place.
+    return 0
+endfunction
 
 nnoremap <F2> :echom SetMutipleSquareBrackets2()<CR>
 nnoremap <F4> :echom DeleteSquareBracket2()<CR>
 nnoremap <silent> <F3> i[<Esc>la]<Esc>h
-nnoremap <c-l> :echom GotoNextFbracket()<CR>
+nnoremap <c-s-l> :echom GotoNextFbracket()<CR>
+nnoremap <c-l> :echom GotoNextJian()<CR>
 "nnoremap <c-h> :echom GotoLastFbracket()<CR>
 verbose nnoremap <c-h> :echom GotoLastFbracket()<CR>
 " Actually this <c-h> is mapped to <c-s-h>. Why?
