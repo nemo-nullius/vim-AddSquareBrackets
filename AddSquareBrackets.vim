@@ -23,7 +23,7 @@ function CheckEndOfLine()
     " Check whether the char under cursor is at the end of its line.
     " Another way of doing this is: if len(getline('.')) ==# col('.')
     " but this will not work for three bytes characters, which requires
-    " if len(getline('.')) ==# col('.')
+    " if len(getline('.')) ==# col('.') + 2
     let l:char_line = line('.')
     let l:char_col = col('.')
     normal! l
@@ -303,3 +303,4 @@ nnoremap <silent> <F3> i[<Esc>la]<Esc>h
 nnoremap <c-l> :echom GotoNextFbracket()<CR>
 "nnoremap <c-h> :echom GotoLastFbracket()<CR>
 verbose nnoremap <c-h> :echom GotoLastFbracket()<CR>
+" Actually this <c-h> is mapped to <c-s-h>. Why?
