@@ -324,7 +324,7 @@ function! GetEndCol() " Get the col() of the last char in the same line.
     " col('$') could be used. But as for Chinese (3-byte-characters), the
     " result is a little bit different.
     " if the last character is a Chinese character,
-    " col('$') = normal! $ | col('.') + 3 (the result is the number of bytes in the cursor line plus one)
+    " normal! $ | col('.') + 3 = col('$') (the result is the number of bytes in the cursor line plus one)
     let l:o_char_col = col('.')
     normal! $
     let l:endpos_col = col('.')
@@ -380,11 +380,116 @@ function! GotoNextJian2() " An advanced version of GotoNextJian(), in which all 
     return 0
 endfunction
 
+function! CheckInJian() " Check whether the cursor is in Jian's annotation
+    let l:o_char_col = col('.')
+    let l:p_char_col = col('.')
+    if GetCharInSameLine(-col('.')+1) ==# '《'
+        " 3 cases:
+        " （ before: yes
+        " ） before: no
+        " else: no
+        while l:p_char_col >= 1
+            " will make the program slow.
+            " need modification
+            if GetCharUnderCursor() ==# '）'
+                call cursor(line('.'), l:o_char_col)
+                return 0
+            endif
+            if GetCharUnderCursor() ==# '（'
+                call cursor(line('.'), l:o_char_col)
+                return 2
+            endif
+            normal! h
+            let l:p_char_col -= 1
+        endwhile
+        call cursor(line('.'), l:o_char_col)
+        return 0
+    else
+        while l:p_char_col >= 1
+            if GetCharUnderCursor() ==# '）'
+                call cursor(line('.'), l:o_char_col)
+                return 0
+            endif
+            if GetCharInSameLine(-2) ==# '箋' && GetCharInSameLine(-1) ==# '云' && GetCharInSameLine(0) ==# '：' 
+                call cursor(line('.'), l:o_char_col)
+                return 1
+            endif
+            normal! h
+            let l:p_char_col -= 1
+        endwhile
+        call cursor(line('.'), l:o_char_col)
+        return 0
+    endif
+endfunction
+
+function! GotoNextJian3() 
+    " An advanced version of GotoNextJian2(), 
+    " in which all possible places of Jian, including places in Jian, will be located.
+    let l:o_char_line = line('.') " Record the position of the original place
+    let l:o_char_col = col('.')
+    " Get the position of the last line of the WHOLE TEXT.
+    let l:endpos_line = line('$')
+
+    let l:char_line = line('.') " Record the position of the present char. 
+
+    while l:char_line <= l:endpos_line
+        
+        let l:endpos_col = GetEndCol()
+        let l:char_col = col('.') 
+        
+        while l:char_col <= l:endpos_col
+            if GetCharUnderCursor() ==# '。' && GetCharInSameLine(1) !=# '）' && CheckInJian() > 0 
+            "if CheckInJian() > 0 && GetCharUnderCursor() ==# '。' && GetCharInSameLine(1) !=# '）' 
+                normal! l
+                return 2 " Find 。 in Zheng's annotation.
+            endif
+            if GetCharInSameLine(-col('.')+1) ==# '《' && GetCharUnderCursor() ==# '（'
+                normal! l
+                return 1 " Find it! End this function.
+            endif
+            if GetCharUnderCursor() ==# '箋' && GetCharInSameLine(1) ==# '云' && GetCharInSameLine(2) ==# '：' 
+                " :%s/xxx//gn
+                " 显示xxx字符串的个数。已统计：箋/箋云/箋云：，俱为2256个。
+                normal! lll
+                return 1 " Find it! End this function.
+            endif
+            " Not found, move to the next char.
+            normal! l
+            let l:char_col += 1
+        endwhile
+        " Go to the beginning of the next line.
+        normal! j0
+        let l:char_line += 1
+    endwhile
+    call cursor(l:o_char_line, o_char_col) " If no （ is found, go back to the original place.
+    return 0
+endfunction
+
+
+function! CopyWithLineNum() " copy: 1234n line_content
+    let l:o_char_col = col('.')
+    " Get the content that is selected in visual-mode
+    " Below is the original expression. +1 is just for the Chinese characters.
+    "let @z = getline("'<")[getpos("'<")[2]-1:getpos("'>")[2]]
+    let @z = getline("'<")[getpos("'<")[2]-1:getpos("'>")[2]+1]
+    " Put the content from the register @z to register @"
+    let @z = line('.').'n '.@z
+    let @" = @z
+    execute ':w'
+    call cursor(line('.'), l:o_char_col)
+    execute 'bn'
+endfunction
+
 nnoremap <F2> :echom SetMutipleSquareBrackets2()<CR>
 nnoremap <F4> :echom DeleteSquareBracket2()<CR>
 nnoremap <silent> <F3> i[<Esc>la]<Esc>h
 nnoremap <c-s-l> :echom GotoNextFbracket()<CR>
-nnoremap <c-l> :echom GotoNextJian2()<CR>
+nnoremap <c-l> :echom GotoNextJian3()<CR>
 "nnoremap <c-h> :echom GotoLastFbracket()<CR>
 verbose nnoremap <c-h> :echom GotoLastFbracket()<CR>
 " Actually this <c-h> is mapped to <c-s-h>. Why?
+
+noremap , :call CopyWithLineNum()<CR>
+nnoremap <c-p> o<Esc>"zp:w<CR>
+
+"nnoremap , :w<CR>
