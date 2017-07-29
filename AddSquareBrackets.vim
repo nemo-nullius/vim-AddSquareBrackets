@@ -1,10 +1,10 @@
-function GetCharUnderCursor()
+function! GetCharUnderCursor()
     " Get the character under cursor, including Chinese characters which
     " occupies 3 bytes in UTF-8.
     return matchstr(getline('.'), '\%' . col('.') . 'c.')
 endfunction
 
-function GetCharInSameLine(pos)
+function! GetCharInSameLine(pos)
     " Get the character in the same line, including Chinese characters which
     " occupies 3 bytes in UTF-8.
     let l:char_line = line('.')
@@ -19,7 +19,7 @@ function GetCharInSameLine(pos)
     return l:result
 endfunction
 
-function CheckEndOfLine()
+function! CheckEndOfLine()
     " Check whether the char under cursor is at the end of its line.
     " Another way of doing this is: if len(getline('.')) ==# col('.')
     " but this will not work for three bytes characters, which requires
@@ -36,7 +36,7 @@ function CheckEndOfLine()
         return 0
 endfunction
 
-function SetMutipleSquareBrackets()
+function! SetMutipleSquareBrackets()
     " To insert a pair of square brackets around a certain char. like [我].
     " And when there has been a square brackets around a previous, it will
     " automatically combine with the previous brackets, like [我们]
@@ -99,7 +99,7 @@ function SetMutipleSquareBrackets()
     return 2
 endfunction
 
-function SetMutipleSquareBrackets2() " An advanced version: In some cases, after the insertation of [X] , the cursor will move to the next/last char, rather than stay on the original char.
+function! SetMutipleSquareBrackets2() " An advanced version: In some cases, after the insertation of [X] , the cursor will move to the next/last char, rather than stay on the original char.
     " To insert a pair of square brackets around a certain char. like [我].
     " And when there has been a square brackets around a previous, it will
     " automatically combine with the previous brackets, like [我们]
@@ -163,7 +163,7 @@ function SetMutipleSquareBrackets2() " An advanced version: In some cases, after
 endfunction
 
 
-function DeleteSquareBracket()
+function! DeleteSquareBracket()
     let l:i = 0
     let l:result = 0
     while l:i < 5 " Delete ]  Five characters will be in a pair of brackets at most.
@@ -212,7 +212,7 @@ function DeleteSquareBracket()
     return l:result
 endfunction
 
-function DeleteSquareBracket2() " An advanced version. Clearer, Correcter, Easier.
+function! DeleteSquareBracket2() " An advanced version. Clearer, Correcter, Easier.
     " Detect the pair of brackets first
     let l:charpos_line = line('.')
     let l:charpos_col = col('.')
@@ -255,7 +255,7 @@ function DeleteSquareBracket2() " An advanced version. Clearer, Correcter, Easie
     return 0
 endfunction
 
-function GotoNextFbracket() " This function is used to goto next （ (in Chinese)
+function! GotoNextFbracket() " This function is used to goto next （ (in Chinese)
     let l:o_char_line = line('.') " Record the position of the original place
     let l:o_char_col = col('.')
     " Goto get the position of the char in the end.
@@ -277,7 +277,7 @@ function GotoNextFbracket() " This function is used to goto next （ (in Chinese
     return 0
 endfunction
     
-function GotoLastFbracket() " This function is used to goto last （ if exists
+function! GotoLastFbracket() " This function is used to goto last （ if exists
     let l:o_char_line = line('.') " Record the position of the original place
     let l:o_char_col = col('.')
     
@@ -296,7 +296,7 @@ function GotoLastFbracket() " This function is used to goto last （ if exists
 endfunction
     
 
-function GotoNextJian() " This function is used to goto next Zhengjian, in Chinese 箋云：
+function! GotoNextJian() " This function is used to goto next Zhengjian, in Chinese 箋云：
     let l:o_char_line = line('.') " Record the position of the original place
     let l:o_char_col = col('.')
     " Goto get the position of the char in the end.
@@ -306,7 +306,9 @@ function GotoNextJian() " This function is used to goto next Zhengjian, in Chine
 
     let l:char_col = col('.') " Record the position of the present char.
     while l:char_col < l:endpos_col " DON'T use <=, for if the cursor is at the end, although normal l is used, the l:char_col will not be added!
-        if GetCharUnderCursor() ==# '箋' && GetCharInSameLine(1) ==# '云' && GetCharInSameLine(2) ==# '：'
+        if GetCharUnderCursor() ==# '箋' && GetCharInSameLine(1) ==# '云' && GetCharInSameLine(2) ==# '：' 
+            " :%s/xxx//gn
+            " 显示xxx字符串的个数。已统计：箋/箋云/箋云：，俱为2256个。
             normal! lll
             return 1 " End this function
         endif
@@ -318,11 +320,71 @@ function GotoNextJian() " This function is used to goto next Zhengjian, in Chine
     return 0
 endfunction
 
+function! GetEndCol() " Get the col() of the last char in the same line.
+    " col('$') could be used. But as for Chinese (3-byte-characters), the
+    " result is a little bit different.
+    " if the last character is a Chinese character,
+    " col('$') = normal! $ | col('.') + 3 (the result is the number of bytes in the cursor line plus one)
+    let l:o_char_col = col('.')
+    normal! $
+    let l:endpos_col = col('.')
+    call cursor(line('.'), l:o_char_col)
+    return l:endpos_col
+endfunction
+
+function! GotoNextJian2() " An advanced version of GotoNextJian(), in which all possible places of Jian will be located.
+    let l:o_char_line = line('.') " Record the position of the original place
+    let l:o_char_col = col('.')
+    " Get the position of the last line of the WHOLE TEXT.
+    let l:endpos_line = line('$')
+
+    let l:char_line = line('.') " Record the position of the present char. 
+
+    while l:char_line <= l:endpos_line
+        
+        let l:endpos_col = GetEndCol()
+        let l:char_col = col('.') 
+        
+        while l:char_col <= l:endpos_col
+            "if GetCharUnderCursor() ==# '《' && col('.') ==# 1 " Line of 小序.
+            "   try
+            "       execute '/\\%'.line('.').'l（'
+            "       " Find sth in one line: /\%2l + sth
+            "       normal! l
+            "       return 1 " Find it! End this function
+            "    "catch
+            "    finally
+            "        echo '...'
+            "        break " Goto the next line directly
+            "    endtry
+            "endif
+            if GetCharInSameLine(-col('.')+1) ==# '《' && GetCharUnderCursor() ==# '（'
+                normal! l
+                return 1 " Find it! End this function.
+            endif
+            if GetCharUnderCursor() ==# '箋' && GetCharInSameLine(1) ==# '云' && GetCharInSameLine(2) ==# '：' 
+                " :%s/xxx//gn
+                " 显示xxx字符串的个数。已统计：箋/箋云/箋云：，俱为2256个。
+                normal! lll
+                return 1 " Find it! End this function.
+            endif
+            " Not found, move to the next char.
+            normal! l
+            let l:char_col += 1
+        endwhile
+        " Go to the beginning of the next line.
+        normal! j0
+        let l:char_line += 1
+    endwhile
+    call cursor(l:o_char_line, o_char_col) " If no （ is found, go back to the original place.
+    return 0
+endfunction
+
 nnoremap <F2> :echom SetMutipleSquareBrackets2()<CR>
 nnoremap <F4> :echom DeleteSquareBracket2()<CR>
 nnoremap <silent> <F3> i[<Esc>la]<Esc>h
 nnoremap <c-s-l> :echom GotoNextFbracket()<CR>
-nnoremap <c-l> :echom GotoNextJian()<CR>
+nnoremap <c-l> :echom GotoNextJian2()<CR>
 "nnoremap <c-h> :echom GotoLastFbracket()<CR>
 verbose nnoremap <c-h> :echom GotoLastFbracket()<CR>
 " Actually this <c-h> is mapped to <c-s-h>. Why?
