@@ -162,6 +162,71 @@ function! SetMutipleSquareBrackets2() " An advanced version: In some cases, afte
     return 2
 endfunction
 
+function! SetMutipleMarker(f_marker, b_marker) 
+    " An advanced version: In some cases, after the insertation of [X] , the cursor will move to the next/last char, rather than stay on the original char.
+    " To insert a pair of square brackets around a certain char. like [我].
+    " And when there has been a square brackets around a previous, it will
+    " automatically combine with the previous brackets, like [我们]
+    if GetCharUnderCursor() ==# a:f_marker || GetCharUnderCursor() ==# a:b_marker
+        return 'Error'
+    endif
+    if col('.') ==# 1 " At the begiining
+        normal! l
+        if GetCharUnderCursor() ==# a:f_marker
+            execute 'normal! xhi'.a:f_marker
+            normal! l
+            return -1
+        endif
+        normal! h
+        execute 'normal! i'.a:f_marker
+        execute 'normal! la'.a:b_marker
+        normal! l
+        return -2
+    endif
+    "if len(getline('.')) ==# col('.') + 2 " At the end, and the last char must be a 3-byte-character
+    if CheckEndOfLine()
+        normal! h
+        if GetCharUnderCursor() ==# a:b_marker
+            execute 'normal! xa'.a:b_marker
+            normal! l
+            return -3
+        endif
+        normal! l
+        execute 'normal! i'.a:f_marker
+        execute 'normal! la'.a:b_marker
+        normal! l
+        return -4
+    endif
+    if GetCharInSameLine(-1) ==# a:b_marker && GetCharInSameLine(1) ==# a:f_marker " [X]Y[Z]
+        normal! hxlxh
+        return -5
+    endif
+    normal! h
+    if GetCharUnderCursor() ==# a:b_marker " [X]Y
+        " This line alone 'normal! xa]\<Esc>h' will not work as expected. For
+        " this normal command considers sth strange with insert mode. There
+        " will be an <Esc> automatically after the end of the normal command. 
+        " See 'help normal' and 'help startinstart' for detail.
+        " So we must use a new normal command after the insert.
+        execute 'normal! xa'.a:b_marker
+        normal! l
+        return 0
+    endif
+    normal! ll
+    if GetCharUnderCursor() ==# a:f_marker " WX[Y]
+        execute 'normal! xhi'.a:f_marker
+        normal! h
+        return 1
+    endif
+    " Back to the original place
+    normal! h
+    execute 'normal! i'.a:f_marker
+    execute 'normal! la'.a:b_marker
+    normal! l
+    return 2
+endfunction
+
+
 
 function! DeleteSquareBracket()
     let l:i = 0
@@ -486,7 +551,9 @@ nnoremap <silent> <F3> i[<Esc>la]<Esc>h
 nnoremap <c-s-l> :echom GotoNextFbracket()<CR>
 nnoremap <c-l> :echom GotoNextJian3()<CR>
 "nnoremap <c-h> :echom GotoLastFbracket()<CR>
+nnoremap <F5> :echom SetMutipleMarker('(',')')<CR>
 verbose nnoremap <c-h> :echom GotoLastFbracket()<CR>
+
 " Actually this <c-h> is mapped to <c-s-h>. Why?
 
 noremap , :call CopyWithLineNum()<CR>
