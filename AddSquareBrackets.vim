@@ -360,6 +360,86 @@ function! GotoLastFbracket() " This function is used to goto last （ if exists
     return 0
 endfunction
     
+function! CheckInMao()
+    " To check whether the cursor is in Mao's annotation
+    if GetCharInSameLine(-col('.')+1) ==# '《'
+        return 0
+    endif " Lines beginning with 《 do not contain Mao's annotation.
+    let l:o_char_col = col('.')
+    let l:p_col_0 = 0 " When the cursor is at the beginning of a line, col('.') == 1.
+    " Therefore, the char at the beginning of a line will also be checked.
+    let l:p_col_1 = col('.')
+    while l:p_col_1 !=# l:p_col_0
+        if GetCharUnderCursor() ==# '）'
+            call cursor(line('.'), l:o_char_col)
+            return 0 " Not in Mao's annotation. Exit.
+        endif
+        if GetCharUnderCursor() ==# '箋' && GetCharInSameLine(1) ==# '云' && GetCharInSameLine(2) ==# '：'
+            
+            call cursor(line('.'), l:o_char_col)
+            return 0 " In Zheng's annotation. Exit.
+        endif
+        if GetCharUnderCursor() ==# '（'
+            call cursor(line('.'), l:o_char_col)
+            return 1
+        endif
+        normal! h
+        let l:p_col_0 = l:p_col_1
+        let l:p_col_1 = col('.')
+    endwhile
+    call cursor(line('.'), l:o_char_col)
+    return 0
+endfunction
+
+function! Check_Jianyuncolon(pos)
+    " This func is used to check beginning from pos, whether the three
+    " characters are 箋云：
+    " For example: as for 。箋云：
+    " When the cursor is on 。, the result of echo Check_Jianyuncolon(1) is 1.
+    if GetCharInSameLine(a:pos) ==# '箋' && GetCharInSameLine(a:pos+1) ==# '云' && GetCharInSameLine(a:pos+2) ==# '：'
+        return 1
+    endif
+    return 0
+endfunction
+
+function! GotoNextMao() 
+    " An advanced version of GotoNextFbracket()
+    " in which all possible places of Mao will be located.
+    let l:o_char_line = line('.') " Record the position of the original place
+    let l:o_char_col = col('.')
+    " Get the position of the last line of the WHOLE TEXT.
+    let l:endpos_line = line('$')
+
+    let l:char_line = line('.') " Record the position of the present char. 
+
+    while l:char_line <= l:endpos_line
+        
+        let l:endpos_col = GetEndCol()
+        let l:char_col = col('.') 
+        
+        while l:char_col <= l:endpos_col
+            if GetCharUnderCursor() ==# '。' && GetCharInSameLine(1) !=# '）' && Check_Jianyuncolon(1) !=# 1 && CheckInMao() > 0 
+                normal! l
+                return 2 " Find 。 in Mao's annotation.
+            endif
+            if GetCharUnderCursor() ==# '（' && GetCharInSameLine(-col('.')+1) !=# '《' && Check_Jianyuncolon(1) !=# 1
+            " Two conditions are excluded:
+            " A line begins with 《, meaning that this line is 小序
+            " A piece of annotation only contains Zhengjian
+                normal! l
+                return 1 " Find it! End this function.
+            endif
+            " Not found, move to the next char.
+            normal! l
+            let l:char_col += 1
+        endwhile
+        " Go to the beginning of the next line.
+        normal! j0
+        let l:char_line += 1
+    endwhile
+    call cursor(l:o_char_line, o_char_col) " If no （ is found, go back to the original place.
+    return 0
+endfunction
 
 function! GotoNextJian() " This function is used to goto next Zhengjian, in Chinese 箋云：
     let l:o_char_line = line('.') " Record the position of the original place
@@ -549,7 +629,8 @@ nnoremap <F2> :echom SetMutipleSquareBrackets2()<CR>
 nnoremap <F4> :echom DeleteSquareBracket2()<CR>
 nnoremap <silent> <F3> i[<Esc>la]<Esc>h
 nnoremap <c-s-l> :echom GotoNextFbracket()<CR>
-nnoremap <c-l> :echom GotoNextJian3()<CR>
+"nnoremap <c-l> :echom GotoNextJian3()<CR>
+nnoremap <c-l> :echom GotoNextMao()<CR>
 "nnoremap <c-h> :echom GotoLastFbracket()<CR>
 nnoremap <F5> :echom SetMutipleMarker('(',')')<CR>
 verbose nnoremap <c-h> :echom GotoLastFbracket()<CR>
